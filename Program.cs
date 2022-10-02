@@ -108,7 +108,7 @@ void Remove_UI()
     int groupSize = 0;
     while (true)
     {
-        groupSize = int.Parse(Read($"There should be this amount of beats in a group (at least {beats.Max()}!!):"));
+        groupSize = int.Parse(Read($"There should be this amount of beats in a group (at least {beats.Max()+1}!!):"));
         if (groupSize >= beats.Count) break;
     }
 
@@ -145,7 +145,40 @@ void Swap_UI()
 
 void Double_UI()
 {
+    Console.WriteLine();
+    Console.WriteLine("= DOUBLE GUIDE =");
+    Console.WriteLine("You can split all the beats there are into groups of a fixed size C.");
+    Console.WriteLine("Then, you can duplicate beats by their number in that group. Duplicating means the beat will play twice.");
+    Console.WriteLine("For example, if you want to double every beat of a song, you double beat 1 in a group of 1.");
+    Console.WriteLine("To double every other beat, you need a group of 2, and double beat 2 (or beat 1 - whatever you prefer)");
+    Console.WriteLine("If you double two beats (say, beat 3 and beat 4) in a group of 4 beats, first two beats (beat 1 and beat 2) will be intact.");
+    Console.WriteLine();
+    string beatsList = "";
+    List<int> beats = new();
+    while (true)
+    {
+        beatsList = Read("I want to duplicate the next beats (list of numbers, split with comma, like 1,2,3):");
+        try
+        {
+            beatsList.Split(',').ToList().ForEach(z => beats.Add(int.Parse(z) - 1)); // we do - 1 to account for indexes beginning with 0
+            break;
+        }
+        catch
+        {
 
+        }
+    }
+    int groupSize = 0;
+    while (true)
+    {
+        groupSize = int.Parse(Read($"There should be this amount of beats in a group (at least {beats.Max()+1}!!):"));
+        if (groupSize >= beats.Count) break;
+    }
+
+    Utils.DoubleBeats(ref beatHolder, beats.ToArray(), groupSize);
+
+    Console.WriteLine($"Success! Press Enter to return.");
+    Console.ReadLine();
 }
 
 void Save_UI()
