@@ -25,8 +25,11 @@ var spb = 60 / bpm; // seconds per beat
 var sr_a = (int)Math.Round(sr * spb) * channels; // amount of samples per one beat
 
 // ditch the offset!
-var offsetSamples = (int)Math.Round(sr * (offset / 1000));
-var blackhole = new float[offsetSamples * channels]; sampleProvider.Read(blackhole, 0, blackhole.Length);
+if (offset != 0)
+{
+    var offsetSamples = (int)Math.Round(sr * (offset / 1000));
+    var blackhole = new float[offsetSamples * channels]; sampleProvider.Read(blackhole, 0, blackhole.Length);
+}
 
 var sC = (int)Math.Ceiling((bpm / 60) * (afr.TotalTime.TotalSeconds - offset / 1000)); // calculate amount of BEATS there are
 
@@ -117,7 +120,27 @@ void Remove_UI()
 
 void Swap_UI()
 {
+    Console.WriteLine();
+    Console.WriteLine("= SWAP GUIDE =");
+    Console.WriteLine("You can split all the beats there are into groups of a fixed size C.");
+    Console.WriteLine("Then, you can swap two beats in that group, beat N and beat K.");
+    Console.WriteLine("For example, if you want to swap every other beat, you need a group size of 2, and then just swap beat 1 with beat 2.");
+    Console.WriteLine("If your group size is 3, swapping beats 1 and 3 will leave beat 2 intact.");
+    Console.WriteLine("Having a group size of 4, then swapping beat 1 and beat 2, will mean that two beats after that (beat 3 and beat 4) will be intact");
+    Console.WriteLine();
+    int beatA = int.Parse(Read("I want to swap beat A numbered...:")) - 1;
+    int beatB = int.Parse(Read("With beat B numbered...:")) - 1;
+    int groupSize = 0;
+    while (true)
+    {
+        groupSize = int.Parse(Read("In a group size of... (at least 2!):"));
+        if (groupSize >= 2) break;
+    }
 
+    Utils.SwapBeats(ref beatHolder, beatA, beatB, groupSize);
+
+    Console.WriteLine($"Successfully swapped beat {beatA+1} with beat {beatB+1} in a group of {groupSize} beats! Press Enter to return.");
+    Console.ReadLine();
 }
 
 void Double_UI()
