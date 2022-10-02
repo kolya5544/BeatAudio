@@ -19,7 +19,7 @@ You will need [.NET 6.0 Runtime](https://dotnet.microsoft.com/en-us/download) in
 
 To run the binary file, on Windows you should use your terminal (for example, `cmd.exe`) and open `BeatAudio.exe`.
 
-For Linux, use your terminal (for example, `bash`) and execute `dotnet BeatAudio.dll`.
+This program can't be run on Linux because of NAudio limitations. Sorry!
 
 From there you'll be able to access the interface of the program. It should be self-explanatory.
 
