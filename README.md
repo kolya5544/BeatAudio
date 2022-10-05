@@ -19,7 +19,9 @@ You will need [.NET 6.0 Runtime](https://dotnet.microsoft.com/en-us/download) in
 
 To run the binary file, on Windows you should use your terminal (for example, `cmd.exe`) and open `BeatAudio.exe`.
 
-This program can't be run on Linux because of NAudio limitations. Sorry!
+### Linux
+
+Due to NAudio limitations, traditional methods of launching a .NET Core program **will not work**. Currently a known and somewhat working way to make BeatAudio work is to compile it using [.NET 6.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) with `dotnet publish -c Release --self-contained true --runtime win10-x64`, then run `wine BeatAudio.exe` in the generated folder.
 
 From there you'll be able to access the interface of the program. It should be self-explanatory.
 

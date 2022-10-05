@@ -6,6 +6,50 @@ string Read(string prompt)
     return Console.ReadLine();
 }
 
+int sC = 0;
+int sr = 0;
+int sr_a = 0;
+int channels = 0;
+
+List<Beat> LoadFile(string fn, double bpm, double offset)
+{
+    var afr = new AudioFileReader(fn);
+    var sampleProvider = afr.ToSampleProvider();
+    var wf = sampleProvider.WaveFormat;
+    sr = wf.SampleRate; // sample rate (per second)
+    channels = wf.Channels;
+
+    var spb = 60 / bpm; // seconds per beat
+    sr_a = (int)Math.Round(sr * spb) * channels; // amount of samples per one beat
+
+    // ditch the offset!
+    if (offset != 0)
+    {
+        var offsetSamples = (int)Math.Round(sr * (offset / 1000));
+        var blackhole = new float[offsetSamples * channels]; sampleProvider.Read(blackhole, 0, blackhole.Length);
+    }
+
+    sC = (int)Math.Ceiling((bpm / 60) * (afr.TotalTime.TotalSeconds - offset / 1000)); // calculate amount of BEATS there are
+
+    Console.WriteLine($"We had found a total of {sC} beats in a {afr.TotalTime.ToString(@"hh\:mm\:ss")} song");
+
+    var sampleBuffer = new float[sr_a];
+    var bh = new List<Beat>(sC);
+    for (int i = 0; i < sC; i++) // read all beats
+    {
+        var bR = sampleProvider.Read(sampleBuffer, 0, sr_a);
+        for (int z = bR; z < sr_a; z++) // we don't need remainders of the previous beat in the last beat of the song
+        {
+            sampleBuffer[z] = 0;
+        }
+        var beatBuffer = new float[sr_a];
+        sampleBuffer.CopyTo(beatBuffer, 0);
+        bh.Add(new Beat() { samples = beatBuffer, position = i });
+    }
+
+    return bh;
+}
+
 Console.WriteLine("========================");
 Console.WriteLine("= Welcome to BeatAudio =");
 Console.WriteLine("=    Made by IKTeam    =");
@@ -15,39 +59,9 @@ string filename = Read("Enter filename of a file to load, like .mp3, .wav etc:")
 double bpm = double.Parse(Read("Enter BPM of a song:"));
 double offset = double.Parse(Read("Enter beginning offset in ms, default is 0:"));
 
-var afr = new AudioFileReader(filename);
-var sampleProvider = afr.ToSampleProvider();
-var wf = sampleProvider.WaveFormat;
-var sr = wf.SampleRate; // sample rate (per second)
-int channels = wf.Channels;
+List<Beat> beatHolder = new();
 
-var spb = 60 / bpm; // seconds per beat
-var sr_a = (int)Math.Round(sr * spb) * channels; // amount of samples per one beat
-
-// ditch the offset!
-if (offset != 0)
-{
-    var offsetSamples = (int)Math.Round(sr * (offset / 1000));
-    var blackhole = new float[offsetSamples * channels]; sampleProvider.Read(blackhole, 0, blackhole.Length);
-}
-
-var sC = (int)Math.Ceiling((bpm / 60) * (afr.TotalTime.TotalSeconds - offset / 1000)); // calculate amount of BEATS there are
-
-Console.WriteLine($"We had found a total of {sC} beats in a {afr.TotalTime.ToString(@"hh\:mm\:ss")} song");
-
-var sampleBuffer = new float[sr_a];
-List<Beat> beatHolder = new List<Beat>(sC);
-for (int i = 0; i < sC; i++) // read all beats
-{
-    var bR = sampleProvider.Read(sampleBuffer, 0, sr_a);
-    for (int z = bR; z < sr_a; z++) // we don't need remainders of the previous beat in the last beat of the song
-    {
-        sampleBuffer[z] = 0;
-    }
-    var beatBuffer = new float[sr_a];
-    sampleBuffer.CopyTo(beatBuffer, 0);
-    beatHolder.Add(new Beat() { samples = beatBuffer, position = i });
-}
+beatHolder = LoadFile(filename, bpm, offset);
 
 Console.WriteLine($"All the beats successfully loaded! Press ENTER to continue.");
 Console.ReadLine();
@@ -64,6 +78,7 @@ while (true)
     Console.WriteLine($"2. Swap Nth beat with Kth beat out of C beats.");
     Console.WriteLine($"3. Double every Nth beat out of K beats.");
     Console.WriteLine($"4. Save the resulting file.");
+    Console.WriteLine($"5. Re-load the file from disk.");
     Console.WriteLine();
     string actionString = Read(">");
     int act = -1;
@@ -79,6 +94,8 @@ while (true)
             Double_UI(); break;
         case 4:
             Save_UI(); break;
+        case 5:
+            beatHolder = LoadFile(filename, bpm, offset); break;
     }
 }
 
@@ -193,7 +210,7 @@ void Save_UI()
     afw.WriteSamples(resultBuffer.ToArray(), 0, resultBuffer.Count);
     afw.Flush();
     afw.Close();
-    Console.WriteLine($"Successfully written {resultBuffer.Count} samples to {output}! Press any key to return to main menu. You can now safely close the program, too.");
+    Console.WriteLine($"Successfully written {resultBuffer.Count} samples to {output}! Press ENTER to return to main menu. You can now safely close the program, too.");
     Console.ReadLine();
 }
 
