@@ -77,8 +77,9 @@ while (true)
     Console.WriteLine($"1. Remove every Nth beat out of K beats.");
     Console.WriteLine($"2. Swap Nth beat with Kth beat out of C beats.");
     Console.WriteLine($"3. Double every Nth beat out of K beats.");
-    Console.WriteLine($"4. Save the resulting file.");
-    Console.WriteLine($"5. Re-load the file from disk.");
+    Console.WriteLine($"4. Reverse the order of beats in groups of N beats.");
+    Console.WriteLine($"5. Save the resulting file.");
+    Console.WriteLine($"6. Re-load the file from disk.");
     Console.WriteLine();
     string actionString = Read(">");
     int act = -1;
@@ -93,8 +94,10 @@ while (true)
         case 3:
             Double_UI(); break;
         case 4:
-            Save_UI(); break;
+            Reverse_UI(); break;
         case 5:
+            Save_UI(); break;
+        case 6:
             beatHolder = LoadFile(filename, bpm, offset); break;
     }
 }
@@ -157,6 +160,26 @@ void Swap_UI()
     Utils.SwapBeats(ref beatHolder, beatA, beatB, groupSize);
 
     Console.WriteLine($"Successfully swapped beat {beatA+1} with beat {beatB+1} in a group of {groupSize} beats! Press Enter to return.");
+    Console.ReadLine();
+}
+
+void Reverse_UI()
+{
+    Console.WriteLine();
+    Console.WriteLine("= REVERSE GUIDE =");
+    Console.WriteLine("You can split all the beats there are into groups of a fixed size C.");
+    Console.WriteLine("Then, you can reverse the order of these groups of beats, preserving the order of beats in the group.");
+    Console.WriteLine("For example, if you want to reverse every beat (so beat 1 becomes beat N, beat 2 becomes beat N-1 etc), you need a group size of 1.");
+    Console.WriteLine("And if you reverse in groups of 2, 1st beat will become N-1th, 2nd beat will become Nth, 3rd beat will become N-3th, and 4th beat will be N-2th...");
+    Console.WriteLine("Group size 1 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] -> [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]");
+    Console.WriteLine("Group size 2 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] -> [9, 10, 7, 8, 5, 6, 3, 4, 1, 2]");
+    Console.WriteLine("Group size 3 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] -> [8, 9, 10, 5, 6, 7, 2, 3, 4, 1] and so on...");
+    Console.WriteLine();
+    int group = int.Parse(Read("I want to swap beats in a group of...:"));
+
+    Utils.ReverseBeats(ref beatHolder, group);
+
+    Console.WriteLine($"Successfully reversed beats in groups of {group}! Press Enter to return.");
     Console.ReadLine();
 }
 
