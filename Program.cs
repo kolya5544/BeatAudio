@@ -345,14 +345,29 @@ void Save_UI()
 {
     Console.WriteLine();
     string output = Read("Filename of the result file:");
+    string compression = Read("Apply MP3 compression to the result? (y/N):");
 
-    var afw = new WaveFileWriter(output, new WaveFormat(sr, channels));
+    bool compress = compression.ToLower() == "y";
+
     Console.WriteLine($"Saving the file to {output}... Please wait!");
     var resultBuffer = new List<float>(beatHolder.Count * sr_a);
     beatHolder.ForEach((z) => { resultBuffer.AddRange(z.samples); });
-    afw.WriteSamples(resultBuffer.ToArray(), 0, resultBuffer.Count);
-    afw.Flush();
-    afw.Close();
+    if (!compress)
+    {
+        var afw = new WaveFileWriter(output, new WaveFormat(sr, channels));
+        afw.WriteSamples(resultBuffer.ToArray(), 0, resultBuffer.Count);
+        afw.Flush();
+        afw.Close();
+    } else
+    {
+        var ms = new MemoryStream();
+        var afw = new WaveFileWriter(ms, new WaveFormat(sr, channels));
+        afw.WriteSamples(resultBuffer.ToArray(), 0, resultBuffer.Count);
+        afw.Flush();
+        ms.Position = 0;
+        File.WriteAllBytes(output, Utils.wavMp3(ms));
+    }
+
     Console.WriteLine($"Successfully written {resultBuffer.Count} samples to {output}! Press ENTER to return to main menu. You can now safely close the program, too.");
     Console.ReadLine();
 }

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using NAudio.Lame;
+using NAudio.Wave;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -86,6 +88,19 @@ public class Utils
         for (int i = 0; i < beats.Count; i++)
         {
             beats[i].position = i;
+        }
+    }
+
+    public static byte[] wavMp3(MemoryStream ms)
+    {
+
+        using (var retMs = new MemoryStream())
+        using (var rdr = new WaveFileReader(ms))
+        using (var wtr = new LameMP3FileWriter(retMs, rdr.WaveFormat, LAMEPreset.STANDARD))
+        {
+            rdr.CopyTo(wtr);
+            wtr.Flush();
+            return retMs.ToArray();
         }
     }
 }
