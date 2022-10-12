@@ -1,4 +1,5 @@
 ﻿using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 string Read(string prompt)
 {
@@ -57,7 +58,7 @@ Console.WriteLine("========================");
 Console.WriteLine();
 string filename = Read("Enter filename of a file to load, like .mp3, .wav etc:");
 double bpm = double.Parse(Read("Enter BPM of a song:"));
-double offset = double.Parse(Read("Enter beginning offset in ms, default is 0:"));
+double offset = double.Parse(Read("Enter beginning offset in ms, sometimes is 0:"));
 
 List<Beat> beatHolder = new();
 
@@ -80,6 +81,7 @@ while (true)
     Console.WriteLine($"4. Reverse the order of beats in groups of N beats.");
     Console.WriteLine($"5. Save the resulting file.");
     Console.WriteLine($"6. Re-load the file from disk.");
+    Console.WriteLine($"7. Playback, BPM and offset adjust.");
     Console.WriteLine();
     string actionString = Read(">");
     int act = -1;
@@ -99,6 +101,8 @@ while (true)
             Save_UI(); break;
         case 6:
             beatHolder = LoadFile(filename, bpm, offset); break;
+        case 7:
+            Adjust_UI(); break;
     }
 }
 
@@ -181,6 +185,122 @@ void Reverse_UI()
 
     Console.WriteLine($"Successfully reversed beats in groups of {group}! Press Enter to return.");
     Console.ReadLine();
+}
+
+void Adjust_UI()
+{
+    Console.Clear();
+    Console.WriteLine();
+    Console.WriteLine("= ADJUST GUIDE =");
+    Console.WriteLine("You'll be able to set BPM and offset, then listen to what the song sounds like with beat sounds added.");
+    Console.WriteLine("This should be helpful to adjust your BPM and offset accordingly");
+    Console.WriteLine("Keep in mind, changing BPM or offset of the song WILL make the program re-load it from file, which WILL lead to losing any changes.");
+    Console.WriteLine();
+    while (true)
+    {
+        Console.WriteLine($"-> Current BPM: {bpm}");
+        Console.WriteLine($"-> Current offset: {offset}");
+        Console.WriteLine();
+        Console.WriteLine($"Possible actions:");
+        Console.WriteLine($"1. Change BPM.");
+        Console.WriteLine($"2. Change offset.");
+        Console.WriteLine($"3. Play with beat sounds.");
+        Console.WriteLine($"4. Return to main menu.");
+        Console.WriteLine();
+        string actionString = Read(">");
+        int act = -1;
+        if (!int.TryParse(actionString, out act) || act == -1) break;
+
+        switch (act)
+        {
+            case 1:
+                bpm = double.Parse(Read("Enter BPM of a song:"));
+                beatHolder = LoadFile(filename, bpm, offset); break;
+            case 2:
+                offset = double.Parse(Read("Enter beginning offset in ms, sometimes is 0:"));
+                beatHolder = LoadFile(filename, bpm, offset); break;
+            case 3:
+                Playback_UI(); break;
+            case 4:
+                return;
+        }
+        Console.Clear();
+    }
+}
+
+void Playback_UI()
+{
+    Console.WriteLine();
+    Console.WriteLine("Generating the playback file...");
+
+    Console.WriteLine("Generating tick channel...");
+
+    using (var ms = new MemoryStream())
+    using (var afw = new WaveFileWriter(ms, new WaveFormat(sr, channels)))
+    using (var msOut = new MemoryStream())
+    using (var wfw = new WaveFileWriter(msOut, new WaveFormat(sr, channels)))
+    using (var tick = new AudioFileReader("tick.wav"))
+    {  // open metronome tick file
+        var sampleProvider = tick.ToSampleProvider();
+        var wf = sampleProvider.WaveFormat;
+        var T_sr = wf.SampleRate; // sample rate (per second)
+        var T_channels = wf.Channels;
+
+        // basically...
+        // we want to build a separate file with just tick sounds matching original BPM
+        // so we can then combine input file and tick sound file to get tick sounds over original file.
+        float[] rawSamples = new float[((int)tick.TotalTime.TotalSeconds + 1) * T_sr];
+        int read = sampleProvider.Read(rawSamples, 0, rawSamples.Length);
+        var allSamples = new float[read];
+        Array.Copy(rawSamples, allSamples, read);
+
+        
+
+        var silence = new float[sr_a - allSamples.Length]; // we need silence after each beat to last for the duration of the beat minus tick sound duration
+
+        for (int i = 0; i < beatHolder.Count; i++)
+        {
+            afw.WriteSamples(allSamples, 0, allSamples.Length);
+            afw.WriteSamples(silence, 0, silence.Length);
+        }
+
+        afw.Flush();
+
+        Console.WriteLine("Generating default channel...");
+
+        // now we should re-build our input back into WAV to combine files
+        var resultBuffer = new List<float>(beatHolder.Count * sr_a);
+        beatHolder.ForEach((z) => { resultBuffer.AddRange(z.samples); });
+        wfw.WriteSamples(resultBuffer.ToArray(), 0, resultBuffer.Count);
+        wfw.Flush();
+
+        Console.WriteLine("Generating final result...");
+        msOut.Position = 0;
+        ms.Position = 0;
+        using (var readerOriginal = new WaveFileReader(msOut))
+        using (var readerTick = new WaveFileReader(ms))
+        {
+            var wcO = new SampleChannel(readerOriginal, true);
+            wcO.Volume = 0.5f;
+            var wcT = new SampleChannel(readerTick, true);
+            wcT.Volume = 2f;
+            var mixer = new MixingSampleProvider(new[] { wcO.ToStereo(), wcT.ToStereo() });
+
+            Console.WriteLine("Playing final result... Press ENTER to stop the playback.");
+            using (var outputDevice = new WaveOutEvent())
+            {
+                outputDevice.Init(mixer.ToStereo());
+                outputDevice.Play();
+                while (outputDevice.PlaybackState == PlaybackState.Playing)
+                {
+                    Console.ReadLine();
+                    outputDevice.Stop();
+                }
+            }
+            //mixer.Read(resultSamples, 0, resultSamples.Length);
+            //WaveFileWriter.CreateWaveFile16("mixed.wav", mixer);
+        }
+    }
 }
 
 void Double_UI()

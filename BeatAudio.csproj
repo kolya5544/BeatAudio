@@ -11,4 +11,10 @@
     <PackageReference Include="NAudio" Version="2.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="tick.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
