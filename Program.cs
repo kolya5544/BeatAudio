@@ -256,7 +256,7 @@ void Playback_UI()
 
         
 
-        var silence = new float[sr_a - allSamples.Length]; // we need silence after each beat to last for the duration of the beat minus tick sound duration
+        var silence = new float[Math.Max(0, sr_a - allSamples.Length)]; // we need silence after each beat to last for the duration of the beat minus tick sound duration
 
         for (int i = 0; i < beatHolder.Count; i++)
         {
