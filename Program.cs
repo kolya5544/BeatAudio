@@ -198,14 +198,15 @@ void Adjust_UI()
     Console.WriteLine();
     while (true)
     {
-        Console.WriteLine($"-> Current BPM: {bpm}");
-        Console.WriteLine($"-> Current offset: {offset}");
+        Console.WriteLine($"-> Current BPM: {bpm} beats per minute");
+        Console.WriteLine($"-> Current offset: {offset}ms");
         Console.WriteLine();
         Console.WriteLine($"Possible actions:");
         Console.WriteLine($"1. Change BPM.");
         Console.WriteLine($"2. Change offset.");
         Console.WriteLine($"3. Play with beat sounds.");
-        Console.WriteLine($"4. Return to main menu.");
+        Console.WriteLine($"4. Shift offset by N beats.");
+        Console.WriteLine($"5. Return to main menu.");
         Console.WriteLine();
         string actionString = Read(">");
         int act = -1;
@@ -220,15 +221,28 @@ void Adjust_UI()
                 offset = double.Parse(Read("Enter beginning offset in ms, sometimes is 0:"));
                 beatHolder = LoadFile(filename, bpm, offset); break;
             case 3:
-                Playback_UI(); break;
+                var answ = Read("Enter the volume for the tick line. Higher is louder. Press enter for default value of 1:");
+                float volume = 1f;
+                if (!string.IsNullOrEmpty(answ)) volume = float.Parse(answ);
+                Playback_UI(volume); break;
             case 4:
+                var diff = double.Parse(Read("Enter amount of beats to shift forward (use negative value to shift backwards):")) * 60 / bpm * 1000;
+                if (offset + diff < 0)
+                {
+                    Console.WriteLine($"Invalid shift value! Results in an offset that is below 0ms. Press Enter to continue.");
+                    Console.ReadLine();
+                    break;
+                }
+                offset += Math.Round(diff);
+                beatHolder = LoadFile(filename, bpm, offset); break;
+            case 5:
                 return;
         }
         Console.Clear();
     }
 }
 
-void Playback_UI()
+void Playback_UI(float tick_volume = 1f)
 {
     Console.WriteLine();
     Console.WriteLine("Generating the playback file...");
@@ -240,6 +254,7 @@ void Playback_UI()
     using (var msOut = new MemoryStream())
     using (var wfw = new WaveFileWriter(msOut, new WaveFormat(sr, channels)))
     using (var tick = new AudioFileReader("tick.wav"))
+    using (var tickFourth = new AudioFileReader("tick4.wav"))
     {  // open metronome tick file
         var sampleProvider = tick.ToSampleProvider();
         var wf = sampleProvider.WaveFormat;
@@ -254,13 +269,25 @@ void Playback_UI()
         var allSamples = new float[read];
         Array.Copy(rawSamples, allSamples, read);
 
-        
+        float[] fourthRaw = new float[rawSamples.Length];
+        var sp = tickFourth.ToSampleProvider();
+        read = sp.Read(fourthRaw, 0, fourthRaw.Length);
+        var fourthSamples = new float[read];
+        Array.Copy(fourthRaw, fourthSamples, read);
+
 
         var silence = new float[Math.Max(0, sr_a - allSamples.Length)]; // we need silence after each beat to last for the duration of the beat minus tick sound duration
 
         for (int i = 0; i < beatHolder.Count; i++)
         {
-            afw.WriteSamples(allSamples, 0, allSamples.Length);
+            if ((i + 1) % 4 == 0)
+            {
+                afw.WriteSamples(fourthSamples, 0, fourthSamples.Length);
+            }
+            else
+            {
+                afw.WriteSamples(allSamples, 0, allSamples.Length);
+            }
             afw.WriteSamples(silence, 0, silence.Length);
         }
 
@@ -281,9 +308,9 @@ void Playback_UI()
         using (var readerTick = new WaveFileReader(ms))
         {
             var wcO = new SampleChannel(readerOriginal, true);
-            wcO.Volume = 0.5f;
+            wcO.Volume = 1f / (tick_volume * 2);
             var wcT = new SampleChannel(readerTick, true);
-            wcT.Volume = 2f;
+            wcT.Volume = tick_volume * 2;
             var mixer = new MixingSampleProvider(new[] { wcO.ToStereo(), wcT.ToStereo() });
 
             Console.WriteLine("Playing final result... Press ENTER to stop the playback.");
